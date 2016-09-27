@@ -57,17 +57,22 @@ module OpenSearch
       perform(:post, "/index/doc/#{index}?#{query_string(q)}&Signature=#{signature}", items: payload)
     end
 
-    # user has responsibility to build subqueries include:
-    # query, filter, sort, aggregate, distinct, kvpair
-    #
-    # args contains all other search arguments
+    def quoted(s)
+      [String, Symbol].include?(s.class) ? "\"#{s.to_s}\"" : s.to_s
+    end
+
     def search index, query={}, args={}
       check_settings!
+      args ||= {}
       start = args[:start] || 0
       hit = args[:hit] || 10
       qs = "config=format:json,start:#{start},hit:#{hit}&&query=#{query[:query]}"
-      %i(filter sort aggregate distinct kvpair).each do |sq|
-        qs += "&&#{sq}=#{query[sq]}" if query.include? sq
+      if query.key?(:filter) && !query[:filter].empty?
+        f = query[:filter].collect {|k, v| "#{k}=#{quoted(v)}"}.join(" AND ")
+        qs += "&&filter=#{f}"
+      end
+      if query.key?(:sort) && !query[:sort].empty?
+        qs += "&&sort=#{query[:sort].join(";")}"
       end
 
       q = new_query.merge({

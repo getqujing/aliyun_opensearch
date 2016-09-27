@@ -26,30 +26,12 @@ module OpenSearch
         self.opensearch_table = table
       end
 
-      def quoted(s)
-        [String, Symbol].include?(s.class) ? "\"#{s.to_s}\"" : s.to_s
-      end
-
-      def search q, f={}
-        f = f.collect {|k, v| "#{k}=#{quoted(v)}"}.join(" AND ")
-        puts f
-        query = {query: "default:'#{q}'"}
-        query[:filter] = f if f.present?
-        self.internal_search(query)
-      end
-
-      def internal_search query={}, args={}
-        client = OpenSearch::Client.new
-        # overwrite fetch_fields to only fetch the primary key, we will load data from database
-
-        args.update(fetch_fields: opensearch_key)
-        args = {start: 0, hit: 10}.merge(args)
-        request = {
+      def search q
+        return OpenSearch::Results.new(self, {
           app: opensearch_app,
-          query: query,
-          args: args,
-        }
-        return OpenSearch::Results.new(self, request)
+          query: {query: "default:'#{q}'"},
+          args: {start: 0, hit: 10, fetch_fields: opensearch_key},
+        })
       end
 
       def suggest

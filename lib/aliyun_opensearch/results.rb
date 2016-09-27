@@ -26,6 +26,27 @@ module OpenSearch
       return response["total"]
     end
 
+    def where options
+      return self if options.empty?
+      request[:query][:filter] ||= {}
+      request[:query][:filter].merge!(options)
+      self
+    end
+
+    def order options
+      return self if options.empty?
+      request[:query][:sort] ||= []
+      options.each do |k ,v|
+        case v
+        when :asc, "asc"
+          request[:query][:sort] << "+#{k}"
+        when :desc, "desc"
+          request[:query][:sort] << "-#{k}"
+        end
+      end
+      self
+    end
+
     # Any will_paginate-compatible collection should have these methods:
     #   current_page, page, per_page, total_entries, total_pages
     def paginate(options={})
@@ -58,9 +79,9 @@ module OpenSearch
     end
 
     private
+
     def execute!
       r = OpenSearch::Client.new.search request[:app], request[:query], request[:args]
-      puts r
       r
     end
 
